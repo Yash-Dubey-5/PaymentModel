@@ -1,0 +1,40 @@
+com/
+  paymentsystem/
+    ├── main/
+    │   └── BankingApp.java
+    |
+    ├── model/
+    │   ├── User.java
+    │   ├── Account.java
+    │   ├── Bank.java
+    │   └── Transaction.java
+    |
+    ├── service/
+    │   ├── IUserService.java         (Interface)
+    │   ├── IBankService.java         (Interface)
+    │   ├── ITransactionService.java  (Interface)
+    │   ├── IDiscountManager.java     (Interface)
+    │   ├── impl/
+    │   │   ├── UserServiceImpl.java
+    │   │   ├── BankServiceImpl.java
+    │   │   ├── TransactionServiceImpl.java
+    │   │   └── DiscountManagerImpl.java
+    |
+    ├── repository/
+    │   ├── IUserRepository.java      (Interface)
+    │   ├── IAccountRepository.java   (Interface)
+    │   ├── impl/
+    │   │   ├── UserJsonRepository.java
+    │   │   └── AccountJsonRepository.java
+    |
+    ├── storage/
+    │   └── JsonStorageHelper.java  (Your "JSONStorage" class)
+    |
+    ├── exception/
+    │   ├── UserNotFoundException.java
+    │   ├── InvalidLoginException.java
+    │   ├── InsufficientFundsException.java
+    │   └── AccountNotFoundException.java
+    |
+    └── util/
+        └── IdGenerator.ja
