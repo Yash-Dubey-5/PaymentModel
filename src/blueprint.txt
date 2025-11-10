@@ -37,4 +37,4 @@ com/
     │   └── AccountNotFoundException.java
     |
     └── util/
-        └── IdGenerator.ja
+        └── IdGenerator.java
