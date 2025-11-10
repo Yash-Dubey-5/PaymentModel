@@ -8,7 +8,7 @@ public class Account {
 
     public Account(){}
 
-    public Account(String accountNumber, User owner,double initialBalance, Bank bank){
+    public Account(String accountNumber, User owner,Bank bank,double initialBalance){
         this.accountNumber=accountNumber;
         this.owner=owner;
         this.bank=bank;
