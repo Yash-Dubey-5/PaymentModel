@@ -224,14 +224,9 @@ public class BankingApp {
         }
     }
 
-    /**
-     * A helper utility to let the user select one of their accounts.
-     * @param prompt The message to show the user (e.g., "Select account to pay from:")
-     * @return The selected Account object, or null if they have no accounts or cancel.
-     */
+
     private static Account selectAccount(String prompt) {
         try {
-            // 1. Get all accounts for the current user
             List<Account> accounts = bankService.getUserAccounts(currentUser.getUserId());
             
             if (accounts.isEmpty()) {
@@ -241,7 +236,6 @@ public class BankingApp {
 
             System.out.println("\n" + prompt);
             
-            // 2. Display all their accounts in a numbered list
             for (int i = 0; i < accounts.size(); i++) {
                 Account acc = accounts.get(i);
                 System.out.printf("  %d. [%s] %s (Balance: $%.2f)\n",
@@ -249,10 +243,8 @@ public class BankingApp {
             }
             System.out.print("Enter your choice (1-" + accounts.size() + "): ");
 
-            // 3. Read their choice
             int choice = readIntInput();
             if (choice > 0 && choice <= accounts.size()) {
-                // 4. Return the chosen account
                 return accounts.get(choice - 1);
             } else {
                 System.out.println("Invalid choice.");
@@ -265,24 +257,18 @@ public class BankingApp {
         }
     }
 
-    /**
-     * Handles the "Make Payment" flow.
-     */
     private static void handleMakePayment() {
         System.out.println("\n--- Make a Payment ---");
         
-        // 1. Use our helper to select the 'from' account
         Account fromAccount = selectAccount("Select account to pay FROM:");
         if (fromAccount == null) {
             System.out.println("Payment cancelled.");
             return;
         }
 
-        // 2. Get the 'to' account
         System.out.print("Enter the 10-digit account number to pay TO: ");
         String toAccountNumber = scanner.nextLine();
 
-        // 3. Get the amount
         System.out.print("Enter amount to transfer: $");
         double amount = readDoubleInput();
         if (amount <= 0) {
@@ -290,7 +276,6 @@ public class BankingApp {
             return;
         }
 
-        // 4. Call the service layer!
         try {
             Transaction receipt = transactionService.makePayment(
                     fromAccount.getAccountNumber(),
@@ -311,13 +296,9 @@ public class BankingApp {
         }
     }
 
-    /**
-     * Handles the "View Transaction History" flow.
-     */
     private static void handleViewTransactionHistory() {
         System.out.println("\n--- Transaction History ---");
-        
-        // 1. Use our helper to select which account to view
+
         Account account = selectAccount("Select account to view history FOR:");
         if (account == null) {
             System.out.println("Action cancelled.");
@@ -325,19 +306,15 @@ public class BankingApp {
         }
 
         try {
-            // 2. Call the service
             List<Transaction> history = transactionService.getTransactionHistory(account.getAccountNumber());
             
             if (history.isEmpty()) {
                 System.out.println("No transactions found for this account.");
                 return;
             }
-
-            // 3. Print the history
             System.out.println("\nHistory for Account: " + account.getAccountNumber());
             for (Transaction t : history) {
                 System.out.println("---------------------------------");
-                // The toString() method in your Transaction model will be used here.
                 System.out.println(t.toString()); 
             }
             System.out.println("---------------------------------");
