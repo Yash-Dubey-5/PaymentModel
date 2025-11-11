@@ -1,20 +1,26 @@
 package com.paymentsystem.main;
 
 import com.paymentsystem.exception.BankNotFoundException;
+import com.paymentsystem.exception.InsufficientFundsException;
 import com.paymentsystem.exception.InvalidLoginException;
 import com.paymentsystem.exception.UserAlreadyExistsException;
 import com.paymentsystem.exception.UserNotFoundException;
+import com.paymentsystem.exception.AccountNotFoundException;
 import com.paymentsystem.model.Account;
+import com.paymentsystem.model.Transaction;
 import com.paymentsystem.model.User;
 import com.paymentsystem.repository.IAccountRepository;
 import com.paymentsystem.repository.IBankRepository;
+import com.paymentsystem.repository.ITransactionRepository;
 import com.paymentsystem.repository.IUserRepository;
 import com.paymentsystem.repository.impl.AccountMemoryRepository;
 import com.paymentsystem.repository.impl.BankMemoryRepository;
 import com.paymentsystem.repository.impl.UserMemoryRepository;
 import com.paymentsystem.Services.IBankService;
+import com.paymentsystem.Services.ITransactionService;
 import com.paymentsystem.Services.IUserService;
 import com.paymentsystem.Services.impl.BankServiceImpl;
+import com.paymentsystem.Services.impl.TransactionServiceImpl;
 import com.paymentsystem.Services.impl.UserServiceImpl;
 
 // import java.util.InputMismatchException;
@@ -28,7 +34,9 @@ public class BankingApp {
     private static IBankService bankService;
     private static IUserRepository userRepository;
     private static IAccountRepository accountRepository;
-    private static IBankRepository bankRepository;    
+    private static IBankRepository bankRepository;   
+    private static ITransactionRepository transactionRepository;
+    private static ITransactionService transactionService; 
     //end 1
 
     private static Scanner scanner;
@@ -47,6 +55,8 @@ public class BankingApp {
         // create services
         userService = new UserServiceImpl(userRepository);
         bankService = new BankServiceImpl(bankRepository, accountRepository, userRepository);
+        transactionService = new TransactionServiceImpl(accountRepository, transactionRepository);
+        
         scanner = new Scanner(System.in);
 
         // existing bank;
@@ -101,8 +111,9 @@ public class BankingApp {
         System.out.println("\n-- Main Menu (Logged in as "+ currentUser.getName()+ ")");
         System.out.println("1. View My Account");
         System.out.println("2. Create New Bank Account");
-        System.out.println("3. (Coming Soon : Make Payment)");
-        System.out.println("4. Logout");
+        System.out.println("3. Make Payments");
+        System.out.println("4. View Transaction History");
+        System.out.println("5. Logout");
         System.out.print("Please enter your choice: ");
 
         int choice = readIntInput();
@@ -114,7 +125,13 @@ public class BankingApp {
             case 2:
                 handleCreateAccount();
                 break;
+            case 3:
+                handleMakePayment();
+                break;
             case 4:
+                handleViewTransactionHistory();
+                break;
+            case 5:
                 handleLogout();
                 break;
             default :
@@ -204,6 +221,129 @@ public class BankingApp {
             System.err.println("Error creating account: "+ e.getMessage());
         } catch(Exception e){
             System.err.println("An unexpected error occurred: "+ e.getMessage());
+        }
+    }
+
+    /**
+     * A helper utility to let the user select one of their accounts.
+     * @param prompt The message to show the user (e.g., "Select account to pay from:")
+     * @return The selected Account object, or null if they have no accounts or cancel.
+     */
+    private static Account selectAccount(String prompt) {
+        try {
+            // 1. Get all accounts for the current user
+            List<Account> accounts = bankService.getUserAccounts(currentUser.getUserId());
+            
+            if (accounts.isEmpty()) {
+                System.out.println("You do not have any bank accounts to perform this action.");
+                return null;
+            }
+
+            System.out.println("\n" + prompt);
+            
+            // 2. Display all their accounts in a numbered list
+            for (int i = 0; i < accounts.size(); i++) {
+                Account acc = accounts.get(i);
+                System.out.printf("  %d. [%s] %s (Balance: $%.2f)\n",
+                        (i + 1), acc.getAccountNumber(), acc.getBank().getBankName(), acc.getBalance());
+            }
+            System.out.print("Enter your choice (1-" + accounts.size() + "): ");
+
+            // 3. Read their choice
+            int choice = readIntInput();
+            if (choice > 0 && choice <= accounts.size()) {
+                // 4. Return the chosen account
+                return accounts.get(choice - 1);
+            } else {
+                System.out.println("Invalid choice.");
+                return null;
+            }
+
+        } catch (UserNotFoundException e) {
+            System.err.println("Error: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Handles the "Make Payment" flow.
+     */
+    private static void handleMakePayment() {
+        System.out.println("\n--- Make a Payment ---");
+        
+        // 1. Use our helper to select the 'from' account
+        Account fromAccount = selectAccount("Select account to pay FROM:");
+        if (fromAccount == null) {
+            System.out.println("Payment cancelled.");
+            return;
+        }
+
+        // 2. Get the 'to' account
+        System.out.print("Enter the 10-digit account number to pay TO: ");
+        String toAccountNumber = scanner.nextLine();
+
+        // 3. Get the amount
+        System.out.print("Enter amount to transfer: $");
+        double amount = readDoubleInput();
+        if (amount <= 0) {
+            System.out.println("Invalid amount.");
+            return;
+        }
+
+        // 4. Call the service layer!
+        try {
+            Transaction receipt = transactionService.makePayment(
+                    fromAccount.getAccountNumber(),
+                    toAccountNumber,
+                    amount
+            );
+            
+            System.out.println("\n--- Payment Successful! ---");
+            System.out.println("Transaction ID: " + receipt.getTransactionId());
+            System.out.println("Amount: $" + String.format("%.2f", receipt.getAmount()));
+            System.out.println("New Balance: $" + String.format("%.2f", fromAccount.getBalance()));
+            
+        } catch (AccountNotFoundException | InsufficientFundsException e) {
+            // 5. Catch our custom exceptions
+            System.err.println("\nPayment Failed: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("\nAn unexpected error occurred: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Handles the "View Transaction History" flow.
+     */
+    private static void handleViewTransactionHistory() {
+        System.out.println("\n--- Transaction History ---");
+        
+        // 1. Use our helper to select which account to view
+        Account account = selectAccount("Select account to view history FOR:");
+        if (account == null) {
+            System.out.println("Action cancelled.");
+            return;
+        }
+
+        try {
+            // 2. Call the service
+            List<Transaction> history = transactionService.getTransactionHistory(account.getAccountNumber());
+            
+            if (history.isEmpty()) {
+                System.out.println("No transactions found for this account.");
+                return;
+            }
+
+            // 3. Print the history
+            System.out.println("\nHistory for Account: " + account.getAccountNumber());
+            for (Transaction t : history) {
+                System.out.println("---------------------------------");
+                // The toString() method in your Transaction model will be used here.
+                System.out.println(t.toString()); 
+            }
+            System.out.println("---------------------------------");
+            
+        } catch (AccountNotFoundException e) {
+            System.err.println("Error: " + e.getMessage());
         }
     }
 

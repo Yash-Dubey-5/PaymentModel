@@ -28,7 +28,9 @@ public class AccountMemoryRepository  implements IAccountRepository{
         List<Account> userAccounts =new ArrayList<>();
 
         for(Account account : accountDatabase.values()){
-            if(account.getOwner().getUserId().equals((userId)));
+            if(account.getOwner().getUserId().equals((userId))){
+                userAccounts.add(account);
+            }
         }
         return userAccounts;
     }
